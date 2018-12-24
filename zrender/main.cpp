@@ -15,10 +15,6 @@ using namespace Eigen;
 #define ON  1
 #define OFF 0
 
-// Window/view variables
-int width, height;
-int PERSPECTIVE = OFF;
-
 // Face subclass
 typedef struct _face {
 	Vector4f a, b, c;
@@ -31,13 +27,23 @@ typedef struct _obj {
 	int vertCount, faceCount;
 } obj;
 
+// Window/view variables
+int width, height;
+int PERSPECTIVE = ON;
+
+// Camera variables
+float camSensitivity = 0.2;
+int camMove = ON;
+int lastX, lastY;
+Vector3f viewCenter;
+Vector3f location;
+
+
 // Scene variables
 int objCount;
 obj *objList;
 int showAxes = ON;
 
-
-////////////////////////////////////////////// MESH OPERATIONS ////////////////////////////////////////////////////////////////////
 // Load a single mesh object and store corresponding vertex, face, and texture data
 void loadMesh(char *filename, int objIndex) {
 
@@ -145,8 +151,8 @@ void render() {
 	}
 
 	// Set camera position
-	gluLookAt(0, 0, 10, 0, 0, 0, 0, 1, 0);
-
+	gluLookAt(location(0), location(1), location(2), viewCenter(0), viewCenter(1), viewCenter(2), 0, 1, 0);
+	
 	// Draw scene
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	for (int i = 0; i < objCount; i++) {
@@ -209,7 +215,15 @@ void resize(int x, int y) {
 // Process mouse button input
 void mouseButton(int button, int state, int x, int y) {
 
+	// Left click moves camera
+	if (button == 0 && state == 1) {
+		camMove = ON;
+	}
 
+	// Right click zooms camera
+	if (button == 2 && state == 1) {
+		camMove = OFF;
+	}
 
 }
 
@@ -217,7 +231,26 @@ void mouseButton(int button, int state, int x, int y) {
 // Process mouse movement input
 void mouseMotion(int x, int y) {
 
+	// Left click moves camera
+	if (camMove) {
 
+	}
+	
+	// Right click zooms camera
+	else {
+
+	}
+
+	lastX = x; lastY = y;
+
+}
+
+
+// Initialize camera
+void initCamera() {
+
+	viewCenter << 0, 0, 0;
+	location << 0, 0, 10;
 
 }
 
@@ -226,9 +259,16 @@ void mouseMotion(int x, int y) {
 void keyboard(unsigned char key, int x, int y) {
 
 	switch (key) {
-		case 'q': case 'Q': exit(1); break;                                                       // Close window
-		case 'p': case 'P': if (PERSPECTIVE) PERSPECTIVE = OFF; else PERSPECTIVE = ON; break;     // Toggle projection/perspective view
-		case 'a': case 'A': if (showAxes)       showAxes = OFF; else    showAxes = ON; break;     // Toggle coordinate axes
+		case '`': case '~': exit(1); break;                                                        // Close window
+		case 'p': case 'P': if (PERSPECTIVE) PERSPECTIVE = OFF; else PERSPECTIVE = ON;      break; // Toggle projection/perspective view
+		case 'o': case 'O': if (showAxes)       showAxes = OFF; else    showAxes = ON;      break; // Toggle coordinate axes
+		case 'w': case 'W': location(2) -= camSensitivity; viewCenter(2) -= camSensitivity; break; // Move forward
+		case 's': case 'S': location(2) += camSensitivity; viewCenter(2) += camSensitivity; break; // Move back
+		case 'a': case 'A': location(0) -= camSensitivity; viewCenter(0) -= camSensitivity; break; // Move left
+		case 'd': case 'D': location(0) += camSensitivity; viewCenter(0) += camSensitivity; break; // Move right
+		case 'r': case 'R': location(1) += camSensitivity; viewCenter(1) += camSensitivity; break; // Move up
+		case 'f': case 'F': location(1) -= camSensitivity; viewCenter(1) -= camSensitivity; break; // Move down
+		case '1':                                                             initCamera(); break; // Reset camera
 	}
 
 	glutPostRedisplay();
@@ -237,7 +277,7 @@ void keyboard(unsigned char key, int x, int y) {
 
 
 // Window setup using GLUT
-void setupWindow(int argc, char *argv[]) {
+void initWindow(int argc, char *argv[]) {
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
@@ -251,7 +291,7 @@ void setupWindow(int argc, char *argv[]) {
 }
 
 
-// Initialize OpenGL
+// Initialize OpenGL settings
 void initGL() {
 
 	glMatrixMode(GL_PROJECTION);
@@ -267,12 +307,11 @@ void initGL() {
 // Main setup method
 int main(int argc, char *argv[]) {
 
-	setupWindow(argc, argv);
+	initWindow(argc, argv);
 	initGL();
-
+	initCamera();
 	loadScene("scene.txt");
 
-	// Enter render loop
 	glutMainLoop();
 	return 0;
 
