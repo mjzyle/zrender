@@ -77,6 +77,9 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>C:\Projects\zrender\libraries\eigen-eigen-b3f3d4950030;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
