@@ -1,1 +1,1 @@
-ddddA personal renderer/test environment for OpenGL
+A personal renderer/test environment for OpenGL
