@@ -14,6 +14,7 @@ using namespace Eigen;
 
 #define ON  1
 #define OFF 0
+#define PI 3.14159265
 
 // Face subclass
 typedef struct _face {
@@ -25,6 +26,7 @@ typedef struct _obj {
 	Vector4f *verts;
 	face *faces;
 	int vertCount, faceCount;
+	Vector3f translate;
 } obj;
 
 // Window/view variables
@@ -32,17 +34,19 @@ int width, height;
 int PERSPECTIVE = ON;
 
 // Camera variables
-float camSensitivity = 0.2;
-int camMove = ON;
+float camSensitivity = 0.1;
+float zoomSensitivity = 0.5;
+float radius, theta, psi;
+int camRotate = ON;
 int lastX, lastY;
 Vector3f viewCenter;
 Vector3f location;
-
 
 // Scene variables
 int objCount;
 obj *objList;
 int showAxes = ON;
+
 
 // Load a single mesh object and store corresponding vertex, face, and texture data
 void loadMesh(char *filename, int objIndex) {
@@ -104,10 +108,11 @@ void loadScene(char *filename) {
 	}
 	else {
 		// Count objects
+		float x, y, z;
 		char letter;
 		char objName[256];
 		while (!feof(f)) {
-			fscanf(f, "%c %s\n", &letter, &objName);
+			fscanf(f, "%c %s %f %f %f\n", &letter, objName, &x, &y, &z);
 			if (letter == 'o') objCount++;
 		}
 		fclose(f);
@@ -119,8 +124,9 @@ void loadScene(char *filename) {
 
 		// Read individual object data
 		for (int i = 0; i < objCount; i++) {
-			fscanf(f, "%c %s\n", &letter, objName);
+			fscanf(f, "%c %s %f %f %f\n", &letter, objName, &x, &y, &z);
 			loadMesh(objName, i);
+			objList[i].translate << x, y, z;
 		}
 
 		fclose(f);
@@ -138,7 +144,7 @@ void render() {
 	if (PERSPECTIVE) {
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		gluPerspective(60, (GLdouble)width / height, 0.01, 10000);
+		gluPerspective(60, (GLdouble)width / height, 0.01, 10000);      // Set view frustum
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 	}
@@ -152,18 +158,20 @@ void render() {
 
 	// Set camera position
 	gluLookAt(location(0), location(1), location(2), viewCenter(0), viewCenter(1), viewCenter(2), 0, 1, 0);
-	
+
 	// Draw scene
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	for (int i = 0; i < objCount; i++) {
+		glColor3f(0, 1, 0);
+		glTranslatef(objList[i].translate(0), objList[i].translate(1), objList[i].translate(2));
 		for (int j = 1; j < objList[i].faceCount; j++) {
-			glColor3f(0, 1, 0);
 			glBegin(GL_TRIANGLES);
 			glVertex3f(objList[i].faces[j].a(0), objList[i].faces[j].a(1), objList[i].faces[j].a(2));
 			glVertex3f(objList[i].faces[j].b(0), objList[i].faces[j].b(1), objList[i].faces[j].b(2));
 			glVertex3f(objList[i].faces[j].c(0), objList[i].faces[j].c(1), objList[i].faces[j].c(2));
 			glEnd();
 		}
+		glTranslatef(-objList[i].translate(0), -objList[i].translate(1), -objList[i].translate(2));
 	}
 
 	// Draw coordinate axes
@@ -212,17 +220,25 @@ void resize(int x, int y) {
 }
 
 
+// Update the camera location coordinates after a rotational change occurs
+void updateCameraLocation() {
+
+	location << radius * sin(theta) * sin(psi), radius * cos(psi), radius * cos(theta) * sin(psi);
+
+}
+
+
 // Process mouse button input
 void mouseButton(int button, int state, int x, int y) {
 
-	// Left click moves camera
-	if (button == 0 && state == 1) {
-		camMove = ON;
+	// Left click rotates camera
+	if (button == 0 && state == 0) {
+		camRotate = ON;
 	}
 
 	// Right click zooms camera
-	if (button == 2 && state == 1) {
-		camMove = OFF;
+	if (button == 2 && state == 0) {
+		camRotate = OFF;
 	}
 
 }
@@ -231,17 +247,35 @@ void mouseButton(int button, int state, int x, int y) {
 // Process mouse movement input
 void mouseMotion(int x, int y) {
 
-	// Left click moves camera
-	if (camMove) {
-
+	// Left click rotates camera
+	if (camRotate) {
+		if (lastX > x) {
+			theta += camSensitivity;
+		}
+		if (lastY > y && psi < PI - 0.1) {
+			psi += camSensitivity;
+		}
+		if (lastX < x) {
+			theta -= camSensitivity;
+		}
+		if (lastY < y && psi > 0.1) {
+			psi -= camSensitivity;
+		}
 	}
 	
 	// Right click zooms camera
 	else {
-
+		if (lastY > y && radius > 0.1) {
+			radius -= zoomSensitivity;
+		}
+		if (lastY < y) {
+			radius += zoomSensitivity;
+		}
 	}
 
 	lastX = x; lastY = y;
+	updateCameraLocation();
+	glutPostRedisplay();
 
 }
 
@@ -249,8 +283,69 @@ void mouseMotion(int x, int y) {
 // Initialize camera
 void initCamera() {
 
+	radius = 10;
+	theta = 0;
+	psi = PI / 2;
 	viewCenter << 0, 0, 0;
-	location << 0, 0, 10;
+	updateCameraLocation();
+
+}
+
+
+// Move camera forward
+void moveCamForward() {
+
+	Vector3f moveDirection(viewCenter(0) - location(0), viewCenter(1) - location(1), viewCenter(2) - location(2));
+	moveDirection.normalize();
+	location += camSensitivity * moveDirection;
+	viewCenter += camSensitivity * moveDirection;
+
+}
+
+
+// Move camera backward
+void moveCamBackward() {
+
+	Vector3f moveDirection(location(0) - viewCenter(0),location(1) - viewCenter(1), location(2) - viewCenter(2));
+	moveDirection.normalize();
+	location += camSensitivity * moveDirection;
+	viewCenter += camSensitivity * moveDirection;
+
+}
+
+
+// Move camera left
+void moveCamLeft() {
+
+	Vector3f viewDirection(viewCenter(0) - location(0), viewCenter(1) - location(1), viewCenter(2) - location(2));
+	Vector3f moveDirection(0, 0, 1);
+	moveDirection.normalize();
+	location += camSensitivity * moveDirection;
+	viewCenter += camSensitivity * moveDirection;
+
+}
+
+
+// Move camera right
+void moveCamRight() {
+
+
+
+}
+
+
+// Move camera up
+void moveCamUp() {
+
+
+
+}
+
+
+// Move camera down
+void moveCamDown() {
+
+
 
 }
 
@@ -262,13 +357,13 @@ void keyboard(unsigned char key, int x, int y) {
 		case '`': case '~': exit(1); break;                                                        // Close window
 		case 'p': case 'P': if (PERSPECTIVE) PERSPECTIVE = OFF; else PERSPECTIVE = ON;      break; // Toggle projection/perspective view
 		case 'o': case 'O': if (showAxes)       showAxes = OFF; else    showAxes = ON;      break; // Toggle coordinate axes
-		case 'w': case 'W': location(2) -= camSensitivity; viewCenter(2) -= camSensitivity; break; // Move forward
-		case 's': case 'S': location(2) += camSensitivity; viewCenter(2) += camSensitivity; break; // Move back
-		case 'a': case 'A': location(0) -= camSensitivity; viewCenter(0) -= camSensitivity; break; // Move left
-		case 'd': case 'D': location(0) += camSensitivity; viewCenter(0) += camSensitivity; break; // Move right
-		case 'r': case 'R': location(1) += camSensitivity; viewCenter(1) += camSensitivity; break; // Move up
-		case 'f': case 'F': location(1) -= camSensitivity; viewCenter(1) -= camSensitivity; break; // Move down
-		case '1':                                                             initCamera(); break; // Reset camera
+		case 'w': case 'W': moveCamForward();  break; // Move forward
+		case 's': case 'S': moveCamBackward(); break; // Move back
+		case 'a': case 'A': moveCamLeft();     break; // Move left
+		case 'd': case 'D': moveCamRight();    break; // Move right
+		case 'r': case 'R': moveCamUp();       break; // Move up
+		case 'f': case 'F': moveCamDown();     break; // Move down
+		case '1':           initCamera();      break; // Reset camera
 	}
 
 	glutPostRedisplay();

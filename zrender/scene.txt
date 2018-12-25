@@ -1,1 +1,3 @@
-o objects/teapot.obj
+o objects/teapot.obj 5.0 0.0 0.0
+o objects/sphere.obj 0.0 5.0 0.0
+o objects/sphere.obj 0.0 0.0 0.0
