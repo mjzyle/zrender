@@ -39,8 +39,7 @@ float zoomSensitivity = 0.5;
 float radius, theta, psi;
 int camRotate = ON;
 int lastX, lastY;
-Vector3f viewCenter;
-Vector3f location;
+Vector3f viewCenter, location, up;
 
 // Scene variables
 int objCount;
@@ -230,7 +229,7 @@ void updateCameraLocation() {
 
 // Process mouse button input
 void mouseButton(int button, int state, int x, int y) {
-
+	/*
 	// Left click rotates camera
 	if (button == 0 && state == 0) {
 		camRotate = ON;
@@ -240,13 +239,13 @@ void mouseButton(int button, int state, int x, int y) {
 	if (button == 2 && state == 0) {
 		camRotate = OFF;
 	}
-
+	*/
 }
 
 
 // Process mouse movement input
 void mouseMotion(int x, int y) {
-
+	/*
 	// Left click rotates camera
 	if (camRotate) {
 		if (lastX > x) {
@@ -276,7 +275,7 @@ void mouseMotion(int x, int y) {
 	lastX = x; lastY = y;
 	updateCameraLocation();
 	glutPostRedisplay();
-
+	*/
 }
 
 
@@ -287,7 +286,8 @@ void initCamera() {
 	theta = 0;
 	psi = PI / 2;
 	viewCenter << 0, 0, 0;
-	updateCameraLocation();
+	up << 0, 1, 10;
+	location << 0, 0, 10;
 
 }
 
@@ -295,10 +295,11 @@ void initCamera() {
 // Move camera forward
 void moveCamForward() {
 
-	Vector3f moveDirection(viewCenter(0) - location(0), viewCenter(1) - location(1), viewCenter(2) - location(2));
+	Vector3f moveDirection = viewCenter - location;
 	moveDirection.normalize();
 	location += camSensitivity * moveDirection;
 	viewCenter += camSensitivity * moveDirection;
+	up += camSensitivity * moveDirection;
 
 }
 
@@ -306,10 +307,11 @@ void moveCamForward() {
 // Move camera backward
 void moveCamBackward() {
 
-	Vector3f moveDirection(location(0) - viewCenter(0),location(1) - viewCenter(1), location(2) - viewCenter(2));
+	Vector3f moveDirection = location - viewCenter;
 	moveDirection.normalize();
 	location += camSensitivity * moveDirection;
 	viewCenter += camSensitivity * moveDirection;
+	up += camSensitivity * moveDirection;
 
 }
 
@@ -317,11 +319,13 @@ void moveCamBackward() {
 // Move camera left
 void moveCamLeft() {
 
-	Vector3f viewDirection(viewCenter(0) - location(0), viewCenter(1) - location(1), viewCenter(2) - location(2));
-	Vector3f moveDirection(0, 0, 1);
+	Vector3f viewDirection = viewCenter - location;
+	Vector3f upDirection = up - location;
+	Vector3f moveDirection = upDirection.cross(viewDirection);
 	moveDirection.normalize();
 	location += camSensitivity * moveDirection;
 	viewCenter += camSensitivity * moveDirection;
+	up += camSensitivity * moveDirection;
 
 }
 
@@ -329,7 +333,13 @@ void moveCamLeft() {
 // Move camera right
 void moveCamRight() {
 
-
+	Vector3f viewDirection = viewCenter - location;
+	Vector3f upDirection = up - location;
+	Vector3f moveDirection = viewDirection.cross(upDirection);
+	moveDirection.normalize();
+	location += camSensitivity * moveDirection;
+	viewCenter += camSensitivity * moveDirection;
+	up += camSensitivity * moveDirection;
 
 }
 
@@ -337,13 +347,53 @@ void moveCamRight() {
 // Move camera up
 void moveCamUp() {
 
-
+	Vector3f upDirection = up - location;
+	upDirection.normalize();
+	location += camSensitivity * upDirection;
+	viewCenter += camSensitivity * upDirection;
+	up += camSensitivity * upDirection;
 
 }
 
 
 // Move camera down
 void moveCamDown() {
+
+	Vector3f downDirection = location - up;
+	downDirection.normalize();
+	location += camSensitivity * downDirection;
+	viewCenter += camSensitivity * downDirection;
+	up += camSensitivity * downDirection;
+
+}
+
+
+// Rotate camera left
+void rotCamLeft() {
+
+	
+
+}
+
+
+// Rotate camera right
+void rotCamRight() {
+
+
+
+}
+
+
+// Rotate camera up
+void rotCamUp() {
+
+
+
+}
+
+
+// Rotate camera down
+void rotCamDown() {
 
 
 
@@ -363,6 +413,10 @@ void keyboard(unsigned char key, int x, int y) {
 		case 'd': case 'D': moveCamRight();    break; // Move right
 		case 'r': case 'R': moveCamUp();       break; // Move up
 		case 'f': case 'F': moveCamDown();     break; // Move down
+		case 'q': case 'Q': rotCamLeft();      break; // Rotate left
+		case 'e': case 'E': rotCamRight();     break; // Rotate right
+		case 't': case 'T': rotCamUp();        break; // Rotate up
+		case 'g': case 'G': rotCamDown();      break; // Rotate down
 		case '1':           initCamera();      break; // Reset camera
 	}
 
