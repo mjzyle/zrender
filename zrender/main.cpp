@@ -38,7 +38,6 @@ int PERSPECTIVE = ON;
 const int totCams = 2;
 int camIndex = 0;
 camera cams[totCams];
-camera mainCam = cams[0];
 
 // Scene variables
 int objCount;
@@ -156,7 +155,7 @@ void render() {
 	}
 
 	// Set camera position
-	gluLookAt(mainCam.location(0), mainCam.location(1), mainCam.location(2), mainCam.viewCenter(0), mainCam.viewCenter(1), mainCam.viewCenter(2), 0, 1, 0);
+	gluLookAt(cams[camIndex].location(0), cams[camIndex].location(1), cams[camIndex].location(2), cams[camIndex].viewCenter(0), cams[camIndex].viewCenter(1), cams[camIndex].viewCenter(2), 0, 1, 0);
 	
 	// Draw scene
 	if (showScene) {
@@ -200,9 +199,9 @@ void render() {
 
 	// Draw view center indicator
 	glColor3f(1, 1, 0);
-	glTranslatef(mainCam.viewCenter(0), mainCam.viewCenter(1), mainCam.viewCenter(2));
+	glTranslatef(cams[camIndex].viewCenter(0), cams[camIndex].viewCenter(1), cams[camIndex].viewCenter(2));
 	glutSolidSphere(0.1, 10, 10);
-	glTranslatef(-mainCam.viewCenter(0), -mainCam.viewCenter(1), -mainCam.viewCenter(2));
+	glTranslatef(-cams[camIndex].viewCenter(0), -cams[camIndex].viewCenter(1), -cams[camIndex].viewCenter(2));
 
 	glutSwapBuffers();
 
@@ -279,16 +278,12 @@ void mouseMotion(int x, int y) {
 }
 
 
-// Cycle through the cameras
+// Cycle through the available cameras
 void switchCamera() {
 
-	if (camIndex >= totCams) {
-		camIndex = 0;
-	}
-	else {
-		camIndex++;
-	}
-	mainCam = cams[camIndex];
+	camIndex++;
+	if (camIndex >= totCams) camIndex = 0;
+
 
 }
 
@@ -301,19 +296,19 @@ void keyboard(unsigned char key, int x, int y) {
 		case 'p': case 'P': if (PERSPECTIVE) PERSPECTIVE = OFF; else PERSPECTIVE = ON;      break; // Toggle projection/perspective view
 		case 'o': case 'O': if (showAxes)       showAxes = OFF; else    showAxes = ON;      break; // Toggle coordinate axes
 		case 'i': case 'I': if (showScene)     showScene = OFF; else   showScene = ON;      break; // Toggle scene
-		case 'w': case 'W': mainCam.moveCamForward();  break; // Move forward
-		case 's': case 'S': mainCam.moveCamBackward(); break; // Move back
-		case 'a': case 'A': mainCam.moveCamLeft();     break; // Move left
-		case 'd': case 'D': mainCam.moveCamRight();    break; // Move right
-		case 'r': case 'R': mainCam.moveCamUp();       break; // Move up
-		case 'f': case 'F': mainCam.moveCamDown();     break; // Move down
-		case 'q': case 'Q': mainCam.rotCamLeft();      break; // Rotate left
-		case 'e': case 'E': mainCam.rotCamRight();     break; // Rotate right
-		case 't': case 'T': mainCam.rotCamUp();        break; // Rotate up
-		case 'g': case 'G': mainCam.rotCamDown();      break; // Rotate down
-		case '=':           mainCam.zoomIn();          break; // Zoom in
-		case '-':           mainCam.zoomOut();         break; // Zoom out
-		case '1':           mainCam.initCamera();      break; // Reset camera
+		case 'w': case 'W': cams[camIndex].moveCamForward();  break; // Move forward
+		case 's': case 'S': cams[camIndex].moveCamBackward(); break; // Move back
+		case 'a': case 'A': cams[camIndex].moveCamLeft();     break; // Move left
+		case 'd': case 'D': cams[camIndex].moveCamRight();    break; // Move right
+		case 'r': case 'R': cams[camIndex].moveCamUp();       break; // Move up
+		case 'f': case 'F': cams[camIndex].moveCamDown();     break; // Move down
+		case 'q': case 'Q': cams[camIndex].rotCamLeft();      break; // Rotate left
+		case 'e': case 'E': cams[camIndex].rotCamRight();     break; // Rotate right
+		case 't': case 'T': cams[camIndex].rotCamUp();        break; // Rotate up
+		case 'g': case 'G': cams[camIndex].rotCamDown();      break; // Rotate down
+		case '=':           cams[camIndex].zoomIn();          break; // Zoom in
+		case '-':           cams[camIndex].zoomOut();         break; // Zoom out
+		case '1':           cams[camIndex].initCamera();      break; // Reset camera
 		case '0':           switchCamera();            break; // Switch current camera
 	}
 
@@ -358,8 +353,9 @@ int main(int argc, char *argv[]) {
 	initGL();
 	for (int i = 0; i < totCams; i++) {
 		cams[i] = camera();
+		cams[i].initCamera();
 	}
-	mainCam.initCamera();
+	cams[camIndex].initCamera();
 	loadScene("scene.txt");
 
 	glutMainLoop();

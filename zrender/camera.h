@@ -9,8 +9,8 @@ using namespace Eigen;
 class camera
 {
 public:
-	float camSensitivity = 0.01f;
-	float angleSensitivity = 0.01f;
+	float camSensitivity = 0.05f;
+	float angleSensitivity = 0.05f;
 	float zoomSensitivity = 0.05f;
 	float radius, theta, psi;
 	int camRotate = ON;

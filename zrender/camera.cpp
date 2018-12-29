@@ -33,7 +33,7 @@ void camera::initCamera() {
 	theta = 0.0f;
 	psi = PI / 2;
 	viewCenter << 0, 0, 0;
-	up << 0, 0.1, 10;
+	up << 0, 0.01, 10;
 	location << 0, 0, 10;
 
 }
@@ -172,8 +172,8 @@ void camera::rotCamUp() {
 	location << radius * sin(theta) * sin(psi), radius * cos(psi), radius * cos(theta) * sin(psi);
 	location += viewCenter;
 
-	float upRad = sqrt(0.1 + pow(radius, 2));
-	float upPsi = psi - tan(0.1 / radius);
+	float upRad = sqrt(0.01 + pow(radius, 2));
+	float upPsi = psi - tan(0.01 / radius);
 	up -= viewCenter;
 	up << upRad * sin(theta) * sin(upPsi), upRad * cos(upPsi), upRad * cos(theta) * sin(upPsi);
 	up += viewCenter;
@@ -191,8 +191,8 @@ void camera::rotCamDown() {
 	location << radius * sin(theta) * sin(psi), radius * cos(psi), radius * cos(theta) * sin(psi);
 	location += viewCenter;
 
-	float upRad = sqrt(0.1 + pow(radius, 2));
-	float upPsi = psi + tan(0.1 / radius);
+	float upRad = sqrt(0.01 + pow(radius, 2));
+	float upPsi = psi - tan(0.01 / radius);
 	up -= viewCenter;
 	up << upRad * sin(theta) * sin(upPsi), upRad * cos(upPsi), upRad * cos(theta) * sin(upPsi);
 	up += viewCenter;
