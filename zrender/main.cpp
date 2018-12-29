@@ -45,6 +45,7 @@ Vector3f viewCenter, location, up;
 int objCount;
 obj *objList;
 int showAxes = ON;
+int showScene = ON;
 
 
 // Load a single mesh object and store corresponding vertex, face, and texture data
@@ -157,22 +158,24 @@ void render() {
 
 	// Set camera position
 	gluLookAt(location(0), location(1), location(2), viewCenter(0), viewCenter(1), viewCenter(2), 0, 1, 0);
-
+	
 	// Draw scene
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	for (int i = 0; i < objCount; i++) {
-		glColor3f(0, 1, 0);
-		glTranslatef(objList[i].translate(0), objList[i].translate(1), objList[i].translate(2));
-		for (int j = 1; j < objList[i].faceCount; j++) {
-			glBegin(GL_TRIANGLES);
-			glVertex3f(objList[i].faces[j].a(0), objList[i].faces[j].a(1), objList[i].faces[j].a(2));
-			glVertex3f(objList[i].faces[j].b(0), objList[i].faces[j].b(1), objList[i].faces[j].b(2));
-			glVertex3f(objList[i].faces[j].c(0), objList[i].faces[j].c(1), objList[i].faces[j].c(2));
-			glEnd();
+	if (showScene) {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		for (int i = 0; i < objCount; i++) {
+			glColor3f(0, 1, 0);
+			glTranslatef(objList[i].translate(0), objList[i].translate(1), objList[i].translate(2));
+			for (int j = 1; j < objList[i].faceCount; j++) {
+				glBegin(GL_TRIANGLES);
+				glVertex3f(objList[i].faces[j].a(0), objList[i].faces[j].a(1), objList[i].faces[j].a(2));
+				glVertex3f(objList[i].faces[j].b(0), objList[i].faces[j].b(1), objList[i].faces[j].b(2));
+				glVertex3f(objList[i].faces[j].c(0), objList[i].faces[j].c(1), objList[i].faces[j].c(2));
+				glEnd();
+			}
+			glTranslatef(-objList[i].translate(0), -objList[i].translate(1), -objList[i].translate(2));
 		}
-		glTranslatef(-objList[i].translate(0), -objList[i].translate(1), -objList[i].translate(2));
 	}
-
+	
 	// Draw coordinate axes
 	if (showAxes) {
 		// Draw the coordinate axes
@@ -196,6 +199,12 @@ void render() {
 		glEnd();
 	}
 
+	// Draw view center indicator
+	glColor3f(1, 1, 0);
+	glTranslatef(viewCenter(0), viewCenter(1), viewCenter(2));
+	glutSolidSphere(0.1, 10, 10);
+	glTranslatef(-viewCenter(0), -viewCenter(1), -viewCenter(2));
+
 	glutSwapBuffers();
 
 }
@@ -215,14 +224,6 @@ void resize(int x, int y) {
 		glLoadIdentity();
 	}
 	printf("Screen resized to dimensions %d x %d\n", x, y);
-
-}
-
-
-// Update the camera location coordinates after a rotational change occurs
-void updateCameraLocation() {
-
-	location << radius * sin(theta) * sin(psi), radius * cos(psi), radius * cos(theta) * sin(psi);
 
 }
 
@@ -286,8 +287,16 @@ void initCamera() {
 	theta = 0;
 	psi = PI / 2;
 	viewCenter << 0, 0, 0;
-	up << 0, 1, 10;
+	up << 0, 0.1, 10;
 	location << 0, 0, 10;
+
+}
+
+
+// Print the current camera location info
+void printCameraLoc() {
+
+	printf("Location: %f %f %f; Viewing: %f %f %f; Up: %f %f %f\n", location(0), location(1), location(2), viewCenter(0), viewCenter(1), viewCenter(2), up(0), up(1), up(2));
 
 }
 
@@ -300,6 +309,7 @@ void moveCamForward() {
 	location += camSensitivity * moveDirection;
 	viewCenter += camSensitivity * moveDirection;
 	up += camSensitivity * moveDirection;
+	printCameraLoc();
 
 }
 
@@ -312,6 +322,7 @@ void moveCamBackward() {
 	location += camSensitivity * moveDirection;
 	viewCenter += camSensitivity * moveDirection;
 	up += camSensitivity * moveDirection;
+	printCameraLoc();
 
 }
 
@@ -326,6 +337,7 @@ void moveCamLeft() {
 	location += camSensitivity * moveDirection;
 	viewCenter += camSensitivity * moveDirection;
 	up += camSensitivity * moveDirection;
+	printCameraLoc();
 
 }
 
@@ -340,6 +352,7 @@ void moveCamRight() {
 	location += camSensitivity * moveDirection;
 	viewCenter += camSensitivity * moveDirection;
 	up += camSensitivity * moveDirection;
+	printCameraLoc();
 
 }
 
@@ -352,6 +365,7 @@ void moveCamUp() {
 	location += camSensitivity * upDirection;
 	viewCenter += camSensitivity * upDirection;
 	up += camSensitivity * upDirection;
+	printCameraLoc();
 
 }
 
@@ -364,6 +378,7 @@ void moveCamDown() {
 	location += camSensitivity * downDirection;
 	viewCenter += camSensitivity * downDirection;
 	up += camSensitivity * downDirection;
+	printCameraLoc();
 
 }
 
@@ -371,7 +386,14 @@ void moveCamDown() {
 // Rotate camera left
 void rotCamLeft() {
 
-	
+	theta -= camSensitivity;
+	location -= viewCenter;
+	location << radius * sin(theta) * sin(psi), radius * cos(psi), radius * cos(theta) * sin(psi);
+	location += viewCenter;
+	up -= viewCenter;
+	up << radius * sin(theta) * sin(psi), 1 + radius * cos(psi), radius * cos(theta) * sin(psi);
+	up += viewCenter;
+	printCameraLoc();
 
 }
 
@@ -379,7 +401,14 @@ void rotCamLeft() {
 // Rotate camera right
 void rotCamRight() {
 
-
+	theta += camSensitivity;
+	location -= viewCenter;
+	location << radius * sin(theta) * sin(psi), radius * cos(psi), radius * cos(theta) * sin(psi);
+	location += viewCenter;
+	up -= viewCenter;
+	up << radius * sin(theta) * sin(psi), 1 + radius * cos(psi), radius * cos(theta) * sin(psi);
+	up += viewCenter;
+	printCameraLoc();
 
 }
 
@@ -387,7 +416,18 @@ void rotCamRight() {
 // Rotate camera up
 void rotCamUp() {
 
+	psi -= camSensitivity;
+	if (psi <= 0.01) psi = 0.01;
+	location -= viewCenter;
+	location << radius * sin(theta) * sin(psi), radius * cos(psi), radius * cos(theta) * sin(psi);
+	location += viewCenter;
 
+	float upRad = sqrt(0.1 + pow(radius, 2));
+	float upPsi = psi - tan(0.1 / radius);
+	up -= viewCenter;
+	up << upRad * sin(theta) * sin(upPsi), upRad * cos(upPsi), upRad * cos(theta) * sin(upPsi);
+	up += viewCenter;
+	printCameraLoc();
 
 }
 
@@ -395,7 +435,49 @@ void rotCamUp() {
 // Rotate camera down
 void rotCamDown() {
 
+	psi += camSensitivity;
+	if (psi >= PI - 0.01) psi = PI - 0.01;
+	location -= viewCenter;
+	location << radius * sin(theta) * sin(psi), radius * cos(psi), radius * cos(theta) * sin(psi);
+	location += viewCenter;
+	
+	float upRad = sqrt(0.1 + pow(radius, 2));
+	float upPsi = psi + tan(0.1 / radius);
+	up -= viewCenter;
+	up << upRad * sin(theta) * sin(upPsi), upRad * cos(upPsi), upRad * cos(theta) * sin(upPsi);
+	up += viewCenter;
+	printCameraLoc();
 
+}
+
+
+// Zoom in
+void zoomIn() {
+
+	radius -= zoomSensitivity;
+	if (radius != 0.01) {
+		Vector3f zoomDirection = viewCenter - location;
+		zoomDirection.normalize();
+		location += camSensitivity * zoomDirection;
+		up += camSensitivity * zoomDirection;
+	}
+	else {
+		radius = 0.01;
+	}
+	printCameraLoc();
+
+}
+
+
+// Zoom out
+void zoomOut() {
+
+	radius += zoomSensitivity;
+	Vector3f zoomDirection = viewCenter - location;
+	zoomDirection.normalize();
+	location -= camSensitivity * zoomDirection;
+	up -= camSensitivity * zoomDirection;
+	printCameraLoc();
 
 }
 
@@ -407,6 +489,7 @@ void keyboard(unsigned char key, int x, int y) {
 		case '`': case '~': exit(1); break;                                                        // Close window
 		case 'p': case 'P': if (PERSPECTIVE) PERSPECTIVE = OFF; else PERSPECTIVE = ON;      break; // Toggle projection/perspective view
 		case 'o': case 'O': if (showAxes)       showAxes = OFF; else    showAxes = ON;      break; // Toggle coordinate axes
+		case 'i': case 'I': if (showScene)     showScene = OFF; else   showScene = ON;      break; // Toggle scene
 		case 'w': case 'W': moveCamForward();  break; // Move forward
 		case 's': case 'S': moveCamBackward(); break; // Move back
 		case 'a': case 'A': moveCamLeft();     break; // Move left
@@ -417,6 +500,8 @@ void keyboard(unsigned char key, int x, int y) {
 		case 'e': case 'E': rotCamRight();     break; // Rotate right
 		case 't': case 'T': rotCamUp();        break; // Rotate up
 		case 'g': case 'G': rotCamDown();      break; // Rotate down
+		case '=':           zoomIn();          break; // Zoom in
+		case '-':           zoomOut();         break; // Zoom out
 		case '1':           initCamera();      break; // Reset camera
 	}
 
