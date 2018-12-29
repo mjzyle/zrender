@@ -9,6 +9,7 @@
 #include <gl/glut.h>
 #include <math.h>
 #include "camera.h"
+#include "obj.h"
 #include <Eigen/Dense>
 
 using namespace Eigen;
@@ -16,19 +17,6 @@ using namespace Eigen;
 #define ON  1
 #define OFF 0
 #define PI 3.14159265
-
-// Face subclass
-typedef struct _face {
-	Vector4f a, b, c;
-} face;
-
-// Object subclass
-typedef struct _obj {
-	Vector4f *verts;
-	face *faces;
-	int vertCount, faceCount;
-	Vector3f translate;
-} obj;
 
 // Window/view variables
 int width, height;
@@ -89,6 +77,10 @@ void loadMesh(char *filename, int objIndex) {
 			objList[objIndex].faces[i].c = objList[objIndex].verts[c - 1];
 		}
 
+		// Calculate normals
+		objList[objIndex].getFaceNorms();
+		//objList[objIndex].getVertNorms();
+
 		fclose(f);
 		printf("Successfully read file %s\n", filename);
 	}
@@ -123,11 +115,29 @@ void loadScene(char *filename) {
 		// Read individual object data
 		for (int i = 0; i < objCount; i++) {
 			fscanf(f, "%c %s %f %f %f\n", &letter, objName, &x, &y, &z);
+			objList[i] = obj();
 			loadMesh(objName, i);
 			objList[i].translate << x, y, z;
 		}
 
 		fclose(f);
+	}
+}
+
+
+// Draw the face normals (currently drawing from a single vertex, not face center)
+void drawFaceNorms() {
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	for (int i = 0; i < objCount; i++) {
+		glColor3f(0, 0, 1);
+		glTranslatef(objList[i].translate(0), objList[i].translate(1), objList[i].translate(2));
+		for (int j = 0; j < objList[i].faceCount; j++) {
+			glBegin(GL_LINES);
+			glVertex3f(objList[i].faces[j].a(0), objList[i].faces[j].a(1), objList[i].faces[j].a(2));
+			glVertex3f(objList[i].faces[j].a(0) + objList[i].faceNorms[j](0), objList[i].faces[j].a(1) + objList[i].faceNorms[j](1), objList[i].faces[j].a(2) + objList[i].faceNorms[j](2));
+			glEnd();
+		}
+		glTranslatef(-objList[i].translate(0), -objList[i].translate(1), -objList[i].translate(2));
 	}
 }
 
@@ -173,6 +183,8 @@ void render() {
 			glTranslatef(-objList[i].translate(0), -objList[i].translate(1), -objList[i].translate(2));
 		}
 	}
+
+	drawFaceNorms();
 	
 	// Draw coordinate axes
 	if (showAxes) {
