@@ -22,7 +22,7 @@ using namespace Eigen;
 int width, height;
 int PERSPECTIVE = ON;
 
-// Cameras
+// Camera variables
 const int totCams = 2;
 int camIndex = 0;
 camera cams[totCams];
@@ -30,8 +30,13 @@ camera cams[totCams];
 // Scene variables
 int objCount;
 obj *objList;
+
+// Visibility variables (for toggling components of the scene on/off)
 int showAxes = ON;
 int showScene = ON;
+int showFaceNorms = OFF;
+int showVertNorms = ON;
+int showCameras = ON;
 
 
 // Load a single mesh object and store corresponding vertex, face, and texture data
@@ -59,14 +64,14 @@ void loadMesh(char *filename, int objIndex) {
 		printf("Object %d: verts = %d, faces = %d\n", objIndex, objList[objIndex].vertCount, objList[objIndex].faceCount);
 
 		// Prepare mesh data lists
-		objList[objIndex].verts = (Vector4f*)malloc(sizeof(Vector4f) * objList[objIndex].vertCount);
+		objList[objIndex].verts = (Vector3f*)malloc(sizeof(Vector3f) * objList[objIndex].vertCount);
 		objList[objIndex].faces = (face*)malloc(sizeof(face) * objList[objIndex].faceCount);
 		f = fopen(filename, "r");
 
 		// Read vertices
 		for (int i = 0; i < objList[objIndex].vertCount; i++) {
 			fscanf(f, "%c %f %f %f\n", &letter, &x, &y, &z);
-			objList[objIndex].verts[i] = Vector4f(x, y, z, 1);
+			objList[objIndex].verts[i] = Vector3f(x, y, z);
 		}
 
 		// Read faces
@@ -79,7 +84,12 @@ void loadMesh(char *filename, int objIndex) {
 
 		// Calculate normals
 		objList[objIndex].getFaceNorms();
-		//objList[objIndex].getVertNorms();
+		objList[objIndex].getVertNorms();
+		//objList[objIndex].getFaceCenters();
+
+		// Setup object texture
+		int colorBuffer;
+		glGenBuffers(1, &colorBuffer);
 
 		fclose(f);
 		printf("Successfully read file %s\n", filename);
@@ -127,18 +137,88 @@ void loadScene(char *filename) {
 
 // Draw the face normals (currently drawing from a single vertex, not face center)
 void drawFaceNorms() {
+
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	float scale = 0.1f;
 	for (int i = 0; i < objCount; i++) {
-		glColor3f(0, 0, 1);
+		glColor3f(0, 1, 1);
 		glTranslatef(objList[i].translate(0), objList[i].translate(1), objList[i].translate(2));
 		for (int j = 0; j < objList[i].faceCount; j++) {
 			glBegin(GL_LINES);
 			glVertex3f(objList[i].faces[j].a(0), objList[i].faces[j].a(1), objList[i].faces[j].a(2));
-			glVertex3f(objList[i].faces[j].a(0) + objList[i].faceNorms[j](0), objList[i].faces[j].a(1) + objList[i].faceNorms[j](1), objList[i].faces[j].a(2) + objList[i].faceNorms[j](2));
+			glVertex3f(objList[i].faces[j].a(0) + scale *objList[i].faceNorms[j](0),
+				       objList[i].faces[j].a(1) + scale * objList[i].faceNorms[j](1),
+				       objList[i].faces[j].a(2) + scale * objList[i].faceNorms[j](2));
 			glEnd();
 		}
 		glTranslatef(-objList[i].translate(0), -objList[i].translate(1), -objList[i].translate(2));
 	}
+
+}
+
+
+// Draw the vertex normals at the appropriate vertex
+void drawVertNorms() {
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	float scale = 0.1f;
+	for (int i = 0; i < objCount; i++) {
+		glColor3f(1, 1, 0);
+		glTranslatef(objList[i].translate(0), objList[i].translate(1), objList[i].translate(2));
+		for (int j = 0; j < objList[i].vertCount; j++) {
+			glBegin(GL_LINES);
+			glVertex3f(objList[i].verts[j](0), objList[i].verts[j](1), objList[i].verts[j](2));
+			glVertex3f(objList[i].verts[j](0) + scale *objList[i].vertNorms[j](0),
+				       objList[i].verts[j](1) + scale *objList[i].vertNorms[j](1),
+				       objList[i].verts[j](2) + scale *objList[i].vertNorms[j](2));
+			glEnd();
+		}
+		glTranslatef(-objList[i].translate(0), -objList[i].translate(1), -objList[i].translate(2));
+	}
+
+}
+
+
+// Draw simple cameras in the scene with vectors denoting the viewing and up directions for each.
+void drawCameras() {
+
+	for (int i = 0; i < totCams; i++) {
+		Vector3f viewDirection, upDirection;
+		viewDirection = cams[i].viewCenter - cams[i].location;
+		upDirection = cams[i].up - cams[i].location;
+		viewDirection.normalize();
+		upDirection.normalize();
+
+		glColor3f(1, 1, 0);
+		glBegin(GL_LINES);
+		glVertex3f(cams[i].location(0), cams[i].location(1), cams[i].location(2));
+		glVertex3f(cams[i].location(0) + viewDirection(0), cams[i].location(1) + viewDirection(1), cams[i].location(2) + viewDirection(2));
+		glEnd();
+
+		glColor3f(0, 1, 1);
+		glBegin(GL_LINES);
+		glVertex3f(cams[i].location(0), cams[i].location(1), cams[i].location(2));
+		glVertex3f(cams[i].location(0) + upDirection(0), cams[i].location(1) + upDirection(1), cams[i].location(2) + upDirection(2));
+		glEnd();
+	}
+
+}
+
+
+// Draw a single object mesh
+void drawObject(int i) {
+
+	glColor3f(0, 1, 0);
+	glTranslatef(objList[i].translate(0), objList[i].translate(1), objList[i].translate(2));
+	for (int j = 1; j < objList[i].faceCount; j++) {
+		glBegin(GL_TRIANGLES);
+		glVertex3f(objList[i].faces[j].a(0), objList[i].faces[j].a(1), objList[i].faces[j].a(2));
+		glVertex3f(objList[i].faces[j].b(0), objList[i].faces[j].b(1), objList[i].faces[j].b(2));
+		glVertex3f(objList[i].faces[j].c(0), objList[i].faces[j].c(1), objList[i].faces[j].c(2));
+		glEnd();
+	}
+	glTranslatef(-objList[i].translate(0), -objList[i].translate(1), -objList[i].translate(2));
+
 }
 
 
@@ -171,22 +251,15 @@ void render() {
 	if (showScene) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		for (int i = 0; i < objCount; i++) {
-			glColor3f(0, 1, 0);
-			glTranslatef(objList[i].translate(0), objList[i].translate(1), objList[i].translate(2));
-			for (int j = 1; j < objList[i].faceCount; j++) {
-				glBegin(GL_TRIANGLES);
-				glVertex3f(objList[i].faces[j].a(0), objList[i].faces[j].a(1), objList[i].faces[j].a(2));
-				glVertex3f(objList[i].faces[j].b(0), objList[i].faces[j].b(1), objList[i].faces[j].b(2));
-				glVertex3f(objList[i].faces[j].c(0), objList[i].faces[j].c(1), objList[i].faces[j].c(2));
-				glEnd();
-			}
-			glTranslatef(-objList[i].translate(0), -objList[i].translate(1), -objList[i].translate(2));
+			drawObject(i);
 		}
 	}
-
-	drawFaceNorms();
-	
-	// Draw coordinate axes
+	if (showFaceNorms) {
+		drawFaceNorms();
+	}
+	if (showVertNorms) {
+		drawVertNorms();
+	}
 	if (showAxes) {
 		// Draw the coordinate axes
 		// x-axis in green
@@ -208,6 +281,7 @@ void render() {
 		glVertex3f(0.0, 0.0, 100.0);
 		glEnd();
 	}
+	drawCameras();
 
 	// Draw view center indicator
 	glColor3f(1, 1, 0);
@@ -304,10 +378,12 @@ void switchCamera() {
 void keyboard(unsigned char key, int x, int y) {
 
 	switch (key) {
-		case '`': case '~': exit(1); break;                                                        // Close window
-		case 'p': case 'P': if (PERSPECTIVE) PERSPECTIVE = OFF; else PERSPECTIVE = ON;      break; // Toggle projection/perspective view
-		case 'o': case 'O': if (showAxes)       showAxes = OFF; else    showAxes = ON;      break; // Toggle coordinate axes
-		case 'i': case 'I': if (showScene)     showScene = OFF; else   showScene = ON;      break; // Toggle scene
+		case '`': case '~': exit(1); break;                                                         // Close window
+		case 'p': case 'P': if (PERSPECTIVE)     PERSPECTIVE = OFF; else   PERSPECTIVE = ON; break; // Toggle projection/perspective view
+		case 'o': case 'O': if (showAxes)           showAxes = OFF; else      showAxes = ON; break; // Toggle coordinate axes
+		case 'i': case 'I': if (showScene)         showScene = OFF; else     showScene = ON; break; // Toggle scene
+		case 'u': case 'U': if (showFaceNorms) showFaceNorms = OFF; else showFaceNorms = ON; break; // Toggle face normals
+		case 'y': case 'Y': if (showVertNorms) showVertNorms = OFF; else showVertNorms = ON; break; // Toggle vertex normals
 		case 'w': case 'W': cams[camIndex].moveCamForward();  break; // Move forward
 		case 's': case 'S': cams[camIndex].moveCamBackward(); break; // Move back
 		case 'a': case 'A': cams[camIndex].moveCamLeft();     break; // Move left
@@ -358,16 +434,23 @@ void initGL() {
 }
 
 
+// Initialize all cameras
+void initCameras() {
+
+	for (int i = 0; i < totCams; i++) {
+		cams[i] = camera();
+		cams[i].initCamera();
+	}
+
+}
+
+
 // Main setup method
 int main(int argc, char *argv[]) {
 
 	initWindow(argc, argv);
 	initGL();
-	for (int i = 0; i < totCams; i++) {
-		cams[i] = camera();
-		cams[i].initCamera();
-	}
-	cams[camIndex].initCamera();
+	initCameras();
 	loadScene("scene.txt");
 
 	glutMainLoop();

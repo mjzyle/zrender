@@ -2,6 +2,7 @@
 // Created by Matthew Zyle on 29.12.18
 
 #include "obj.h"
+#include <iostream>
 
 
 obj::obj()
@@ -29,6 +30,14 @@ void obj::getFaceNorms() {
 }
 
 
+// Determine if two vertices are equal
+bool obj::vertsEqual(Vector3f a, Vector3f b) {
+
+	return a(0) == b(0) && a(1) == b(1) && a(2) == b(2);
+
+}
+
+
 // Determine vertex normals
 void obj::getVertNorms() {
 
@@ -36,9 +45,9 @@ void obj::getVertNorms() {
 	for (int i = 0; i < vertCount; i++) {
 		int j = 0, k = 0;
 		Vector3f borderNorms[3];
-		while (k < 3) {
-			if (faces[j].a == verts[i] || faces[j].b == verts[i] || faces[j].c == verts[i]) {
-				borderNorms[k] << faceNorms[j](0), faceNorms[j](1), faceNorms[j](2);
+		while (k < 3 && j < faceCount) {
+			if (vertsEqual(faces[j].a, verts[i]) || vertsEqual(faces[j].b, verts[i]) || vertsEqual(faces[j].c, verts[i])) {
+				borderNorms[k] = faceNorms[j];
 				k++;
 			}
 			j++;
@@ -49,3 +58,34 @@ void obj::getVertNorms() {
 	}
 
 }
+
+/*
+// Determine face centroids
+void obj::getFaceCenters() {
+
+	faceCenters = (Vector3f*)malloc(sizeof(Vector3f) * faceCount);
+	for (int i = 0; i < faceCount; i++) {
+		// Determine the median lines from two vertices to the opposite face segments
+		Vector3f midAB, midAC, ABtoC, ACtoB;                          
+		midAB = faces[i].a + (faces[i].b - faces[i].a) / 2;
+		midAC = faces[i].a + (faces[i].c - faces[i].a) / 2;
+		ABtoC = faces[i].c - midAB;
+		ACtoB = faces[i].b - midAC;
+
+		// Determine the intersection point of the two lines by solving for the line constants (c)
+		MatrixXf a(3, 3);
+		VectorXf b(3), c(3);
+		a << ABtoC(0), -ACtoB(0), 0.0f,
+			 ABtoC(1), -ACtoB(1), 0.0f,
+			 ABtoC(2), -ACtoB(2), 0.0f;
+		b << midAC(0) - midAB(0),
+			 midAC(1) - midAB(1),
+			 midAC(2) - midAB(2);
+		c = a.inverse() * b;
+
+		// Solve for the intersection point
+		faceCenters[i] = c(0, 0) * ABtoC + midAB;
+	}
+	
+}
+*/

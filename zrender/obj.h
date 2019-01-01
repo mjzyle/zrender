@@ -7,16 +7,16 @@ using namespace Eigen;
 
 // Face subclass
 typedef struct _face {
-	Vector4f a, b, c;
+	Vector3f a, b, c;
 } face;
 
 #pragma once
 class obj
 {
 public:
-	Vector4f *verts;
+	Vector3f *verts;
 	face *faces;
-	Vector3f *faceNorms, *vertNorms;
+	Vector3f *faceNorms, *vertNorms, *faceCenters;
 	int vertCount, faceCount;
 	Vector3f translate;
 
@@ -24,5 +24,7 @@ public:
 	~obj();
 
 	void getFaceNorms();
+	bool vertsEqual(Vector3f a, Vector3f b);
 	void getVertNorms();
+	void getFaceCenters();
 };
